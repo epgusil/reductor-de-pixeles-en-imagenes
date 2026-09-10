@@ -39,6 +39,22 @@
   const previewAfter = document.getElementById('previewAfter');
   const previewAfterPlaceholder = document.getElementById('previewAfterPlaceholder');
 
+  const beforeImgWrap = document.getElementById('beforeImgWrap');
+  const cropOverlay = document.getElementById('cropOverlay');
+  const cropBox = document.getElementById('cropBox');
+  const cropShadeTop = document.getElementById('cropShadeTop');
+  const cropShadeBottom = document.getElementById('cropShadeBottom');
+  const cropShadeLeft = document.getElementById('cropShadeLeft');
+  const cropShadeRight = document.getElementById('cropShadeRight');
+  const btnCropToggle = document.getElementById('btnCropToggle');
+  const cropActions = document.getElementById('cropActions');
+  const cropDraftDims = document.getElementById('cropDraftDims');
+  const btnCropApply = document.getElementById('btnCropApply');
+  const btnCropCancel = document.getElementById('btnCropCancel');
+  const cropInfo = document.getElementById('cropInfo');
+  const cropInfoText = document.getElementById('cropInfoText');
+  const btnCropReset = document.getElementById('btnCropReset');
+
   const outOriginalSize = document.getElementById('outOriginalSize');
   const outNewSize = document.getElementById('outNewSize');
   const outReduction = document.getElementById('outReduction');
@@ -69,7 +85,10 @@
     resultBlob: null,
     resultFileName: '',
     aspectRatio: 1,
-    updatingFromCode: false
+    updatingFromCode: false,
+    cropRect: null,   // { x, y, w, h } en píxeles de la imagen original, o null si no hay recorte
+    cropMode: false,
+    cropDraft: null
   };
 
   const SUPPORTED_EXT = ['png', 'jpg', 'jpeg', 'jfif', 'webp', 'gif', 'bmp'];
@@ -169,6 +188,18 @@
       state.formatLabel = getFormatLabel(file);
       state.aspectRatio = img.naturalWidth / img.naturalHeight;
       state.resultBlob = null;
+
+      // Resetear estado de recorte al cargar una nueva imagen
+      state.cropRect = null;
+      state.cropMode = false;
+      state.cropDraft = null;
+      cropOverlay.hidden = true;
+      cropActions.hidden = true;
+      cropInfo.hidden = true;
+      btnCropReset.hidden = true;
+      btnCropToggle.hidden = false;
+      btnCropToggle.disabled = false;
+      btnCropToggle.textContent = '✂ ACTIVAR RECORTE';
 
       // Mostrar en dropzone
       dropzoneEmpty.hidden = true;
@@ -435,6 +466,224 @@
   });
 
   // ============================================================
+  // CROP (recorte)
+  // ============================================================
+
+  function clamp(v, min, max) {
+    return Math.min(Math.max(v, min), max);
+  }
+
+  function enterCropMode() {
+    if (!state.img) return;
+
+    const initRect = state.cropRect || {
+      x: Math.round(state.origWidth * 0.05),
+      y: Math.round(state.origHeight * 0.05),
+      w: Math.round(state.origWidth * 0.9),
+      h: Math.round(state.origHeight * 0.9)
+    };
+    state.cropDraft = Object.assign({}, initRect);
+    state.cropMode = true;
+
+    cropOverlay.hidden = false;
+    btnCropToggle.hidden = true;
+    cropActions.hidden = false;
+
+    renderCropBox();
+    setStatus('Ajusta el rectángulo de recorte y presiona Aplicar.');
+  }
+
+  function exitCropMode() {
+    state.cropMode = false;
+    cropOverlay.hidden = true;
+    btnCropToggle.hidden = false;
+    cropActions.hidden = true;
+  }
+
+  function renderCropBox() {
+    if (!state.cropDraft) return;
+
+    const wrapRect = beforeImgWrap.getBoundingClientRect();
+    if (wrapRect.width === 0 || wrapRect.height === 0) return;
+
+    const scaleX = wrapRect.width / state.origWidth;
+    const scaleY = wrapRect.height / state.origHeight;
+
+    const left = state.cropDraft.x * scaleX;
+    const top = state.cropDraft.y * scaleY;
+    const width = state.cropDraft.w * scaleX;
+    const height = state.cropDraft.h * scaleY;
+
+    cropBox.style.left = left + 'px';
+    cropBox.style.top = top + 'px';
+    cropBox.style.width = width + 'px';
+    cropBox.style.height = height + 'px';
+
+    cropShadeTop.style.left = '0px';
+    cropShadeTop.style.top = '0px';
+    cropShadeTop.style.width = wrapRect.width + 'px';
+    cropShadeTop.style.height = top + 'px';
+
+    cropShadeBottom.style.left = '0px';
+    cropShadeBottom.style.top = (top + height) + 'px';
+    cropShadeBottom.style.width = wrapRect.width + 'px';
+    cropShadeBottom.style.height = Math.max(0, wrapRect.height - top - height) + 'px';
+
+    cropShadeLeft.style.left = '0px';
+    cropShadeLeft.style.top = top + 'px';
+    cropShadeLeft.style.width = left + 'px';
+    cropShadeLeft.style.height = height + 'px';
+
+    cropShadeRight.style.left = (left + width) + 'px';
+    cropShadeRight.style.top = top + 'px';
+    cropShadeRight.style.width = Math.max(0, wrapRect.width - left - width) + 'px';
+    cropShadeRight.style.height = height + 'px';
+
+    cropDraftDims.textContent = state.cropDraft.w + ' × ' + state.cropDraft.h + ' px';
+  }
+
+  function invalidateResult() {
+    state.resultBlob = null;
+    btnSave.disabled = true;
+    previewAfter.hidden = true;
+    previewAfter.src = '';
+    previewAfterPlaceholder.hidden = false;
+    previewAfterPlaceholder.textContent = 'Sin procesar';
+  }
+
+  btnCropToggle.addEventListener('click', enterCropMode);
+
+  btnCropCancel.addEventListener('click', () => {
+    exitCropMode();
+    setStatus('Recorte cancelado.');
+  });
+
+  btnCropApply.addEventListener('click', () => {
+    if (!state.cropDraft) return;
+
+    state.cropRect = Object.assign({}, state.cropDraft);
+    state.aspectRatio = state.cropRect.w / state.cropRect.h;
+
+    exitCropMode();
+
+    cropInfoText.textContent = state.cropRect.x + ',' + state.cropRect.y + ' — ' +
+      state.cropRect.w + ' × ' + state.cropRect.h + ' px';
+    cropInfo.hidden = false;
+    btnCropReset.hidden = false;
+    btnCropToggle.textContent = '✂ EDITAR RECORTE';
+
+    // Ajustar los campos de ancho/alto al nuevo recorte
+    state.updatingFromCode = true;
+    inputWidth.value = state.cropRect.w;
+    inputHeight.value = state.cropRect.h;
+    state.updatingFromCode = false;
+    updateOutputDimsPreview();
+
+    invalidateResult();
+    setStatus('Recorte aplicado.');
+  });
+
+  btnCropReset.addEventListener('click', () => {
+    state.cropRect = null;
+    state.aspectRatio = state.origWidth / state.origHeight;
+
+    cropInfo.hidden = true;
+    btnCropReset.hidden = true;
+    btnCropToggle.textContent = '✂ ACTIVAR RECORTE';
+
+    state.updatingFromCode = true;
+    inputWidth.value = state.origWidth;
+    inputHeight.value = state.origHeight;
+    state.updatingFromCode = false;
+    updateOutputDimsPreview();
+
+    invalidateResult();
+    setStatus('Recorte eliminado.');
+  });
+
+  // Arrastre del rectángulo y sus manijas (mouse + táctil vía Pointer Events)
+  let cropDrag = null;
+
+  cropBox.addEventListener('pointerdown', (e) => {
+    if (!state.cropDraft) return;
+    e.preventDefault();
+    e.stopPropagation();
+
+    const handle = e.target && e.target.dataset ? e.target.dataset.handle : null;
+    cropBox.setPointerCapture(e.pointerId);
+
+    cropDrag = {
+      pointerId: e.pointerId,
+      mode: handle || 'move',
+      startClientX: e.clientX,
+      startClientY: e.clientY,
+      startRect: Object.assign({}, state.cropDraft)
+    };
+  });
+
+  cropBox.addEventListener('pointermove', (e) => {
+    if (!cropDrag || cropDrag.pointerId !== e.pointerId) return;
+
+    const wrapRect = beforeImgWrap.getBoundingClientRect();
+    if (wrapRect.width === 0 || wrapRect.height === 0) return;
+
+    const scaleX = state.origWidth / wrapRect.width;
+    const scaleY = state.origHeight / wrapRect.height;
+    const dxNat = (e.clientX - cropDrag.startClientX) * scaleX;
+    const dyNat = (e.clientY - cropDrag.startClientY) * scaleY;
+
+    const minSize = 10;
+    const start = cropDrag.startRect;
+    let x = start.x, y = start.y, w = start.w, h = start.h;
+
+    if (cropDrag.mode === 'move') {
+      x = clamp(start.x + dxNat, 0, state.origWidth - w);
+      y = clamp(start.y + dyNat, 0, state.origHeight - h);
+    } else {
+      let nx = start.x, ny = start.y, nw = start.w, nh = start.h;
+
+      if (cropDrag.mode.includes('e')) {
+        nw = clamp(start.w + dxNat, minSize, state.origWidth - start.x);
+      }
+      if (cropDrag.mode.includes('s')) {
+        nh = clamp(start.h + dyNat, minSize, state.origHeight - start.y);
+      }
+      if (cropDrag.mode.includes('w')) {
+        nx = clamp(start.x + dxNat, 0, start.x + start.w - minSize);
+        nw = start.w + (start.x - nx);
+      }
+      if (cropDrag.mode.includes('n')) {
+        ny = clamp(start.y + dyNat, 0, start.y + start.h - minSize);
+        nh = start.h + (start.y - ny);
+      }
+
+      x = nx; y = ny; w = nw; h = nh;
+    }
+
+    state.cropDraft = {
+      x: Math.round(x),
+      y: Math.round(y),
+      w: Math.round(w),
+      h: Math.round(h)
+    };
+    renderCropBox();
+  });
+
+  function endCropDrag(e) {
+    if (cropDrag && cropDrag.pointerId === e.pointerId) {
+      try { cropBox.releasePointerCapture(e.pointerId); } catch (err) { /* noop */ }
+      cropDrag = null;
+    }
+  }
+
+  cropBox.addEventListener('pointerup', endCropDrag);
+  cropBox.addEventListener('pointercancel', endCropDrag);
+
+  window.addEventListener('resize', () => {
+    if (state.cropMode) renderCropBox();
+  });
+
+  // ============================================================
   // Redimensionado de alta calidad (downscale escalonado)
   // ============================================================
 
@@ -514,8 +763,28 @@
 
       await setProgress(40);
 
+      // Si hay un recorte activo, usar esa región como fuente en vez de la imagen completa
+      let sourceEl = state.img;
+      let sourceW = state.origWidth;
+      let sourceH = state.origHeight;
+
+      if (state.cropRect) {
+        const cropCanvas = document.createElement('canvas');
+        cropCanvas.width = state.cropRect.w;
+        cropCanvas.height = state.cropRect.h;
+        const cropCtx = cropCanvas.getContext('2d');
+        cropCtx.drawImage(
+          state.img,
+          state.cropRect.x, state.cropRect.y, state.cropRect.w, state.cropRect.h,
+          0, 0, state.cropRect.w, state.cropRect.h
+        );
+        sourceEl = cropCanvas;
+        sourceW = state.cropRect.w;
+        sourceH = state.cropRect.h;
+      }
+
       // Dibujar con downscale escalonado de alta calidad
-      const canvas = drawScaledStepped(state.img, state.origWidth, state.origHeight, targetW, targetH);
+      const canvas = drawScaledStepped(sourceEl, sourceW, sourceH, targetW, targetH);
 
       await setProgress(65);
 

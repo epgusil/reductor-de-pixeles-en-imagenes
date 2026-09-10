@@ -68,6 +68,26 @@
             </div>
           </fieldset>
 
+          <!-- CROP -->
+          <fieldset class="groupbox">
+            <legend>CROP</legend>
+            <p class="crop-hint">Ajusta el rectángulo sobre la vista previa "ANTES" (panel derecho) para recortar antes de redimensionar.</p>
+
+            <button class="btn-3d btn-big" id="btnCropToggle" disabled>✂ ACTIVAR RECORTE</button>
+
+            <div class="crop-actions" id="cropActions" hidden>
+              <span class="crop-draft-dims" id="cropDraftDims">— × — px</span>
+              <button class="btn-3d" id="btnCropApply">✔ Aplicar</button>
+              <button class="btn-3d" id="btnCropCancel">✖ Cancelar</button>
+            </div>
+
+            <div class="info-panel" id="cropInfo" hidden>
+              <div class="info-row"><span class="info-label">Recorte activo:</span><span class="info-value" id="cropInfoText">—</span></div>
+            </div>
+
+            <button class="btn-3d btn-big" id="btnCropReset" hidden>↺ QUITAR RECORTE</button>
+          </fieldset>
+
           <!-- RESIZE SETTINGS -->
           <fieldset class="groupbox">
             <legend>RESIZE SETTINGS</legend>
@@ -128,7 +148,25 @@
               <div class="preview-pane">
                 <div class="preview-label">ANTES</div>
                 <div class="preview-canvas-wrap">
-                  <img id="previewBefore" class="preview-img" alt="Antes" hidden>
+                  <div class="preview-img-wrap" id="beforeImgWrap">
+                    <img id="previewBefore" class="preview-img" alt="Antes" hidden>
+                    <div class="crop-overlay" id="cropOverlay" hidden>
+                      <div class="crop-shade" id="cropShadeTop"></div>
+                      <div class="crop-shade" id="cropShadeBottom"></div>
+                      <div class="crop-shade" id="cropShadeLeft"></div>
+                      <div class="crop-shade" id="cropShadeRight"></div>
+                      <div class="crop-box" id="cropBox">
+                        <div class="crop-handle crop-handle-nw" data-handle="nw"></div>
+                        <div class="crop-handle crop-handle-n" data-handle="n"></div>
+                        <div class="crop-handle crop-handle-ne" data-handle="ne"></div>
+                        <div class="crop-handle crop-handle-e" data-handle="e"></div>
+                        <div class="crop-handle crop-handle-se" data-handle="se"></div>
+                        <div class="crop-handle crop-handle-s" data-handle="s"></div>
+                        <div class="crop-handle crop-handle-sw" data-handle="sw"></div>
+                        <div class="crop-handle crop-handle-w" data-handle="w"></div>
+                      </div>
+                    </div>
+                  </div>
                   <div class="preview-placeholder" id="previewBeforePlaceholder">Sin imagen</div>
                 </div>
               </div>
