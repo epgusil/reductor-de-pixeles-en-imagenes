@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PIXEL SHRINKER 98</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="desktop">
+  <div class="window" id="mainWindow">
+
+    <!-- Title bar -->
+    <div class="title-bar">
+      <div class="title-bar-text">
+        <span class="title-icon">🖼</span> PIXEL SHRINKER 98 - [Sin nombre]
+      </div>
+      <div class="title-bar-controls">
+        <button class="title-btn" id="btnMin" title="Minimizar">_</button>
+        <button class="title-btn" id="btnMax" title="Maximizar">▢</button>
+        <button class="title-btn title-btn-close" id="btnClose" title="Cerrar">×</button>
+      </div>
+    </div>
+
+    <!-- Menu bar -->
+    <div class="menu-bar">
+      <div class="menu-item" data-menu="file">Archivo</div>
+      <div class="menu-item" data-menu="edit">Edición</div>
+      <div class="menu-item" data-menu="view">Ver</div>
+      <div class="menu-item" data-menu="help">Ayuda</div>
+      <div class="menu-dropdown" id="menuDropdown"></div>
+    </div>
+
+    <div class="window-body">
+
+      <!-- Local processing banner -->
+      <div class="local-banner">
+        🔒 Procesamiento 100% local — tu imagen no sale de tu dispositivo
+      </div>
+
+      <div class="main-grid">
+
+        <!-- LEFT COLUMN -->
+        <div class="col col-left">
+
+          <!-- SOURCE IMAGE -->
+          <fieldset class="groupbox">
+            <legend>SOURCE IMAGE</legend>
+
+            <div class="dropzone" id="dropzone">
+              <div id="dropzoneEmpty">
+                <div class="dropzone-icon">📁</div>
+                <p>Arrastra una imagen aquí</p>
+                <p class="dropzone-sub">o</p>
+                <button class="btn-3d" id="btnBrowse">Examinar...</button>
+                <p class="dropzone-formats">PNG · JPG · JPEG · JFIF · WEBP · GIF · BMP</p>
+              </div>
+              <img id="sourcePreviewImg" class="dropzone-img" alt="Vista previa original" hidden>
+            </div>
+            <input type="file" id="fileInput" accept="image/*,.jfif" hidden>
+
+            <div class="info-panel" id="sourceInfoPanel">
+              <div class="info-row"><span class="info-label">Archivo:</span><span class="info-value" id="infoName">—</span></div>
+              <div class="info-row"><span class="info-label">Formato:</span><span class="info-value" id="infoFormat">—</span></div>
+              <div class="info-row"><span class="info-label">Dimensiones:</span><span class="info-value" id="infoDims">—</span></div>
+              <div class="info-row"><span class="info-label">Peso:</span><span class="info-value" id="infoSize">—</span></div>
+            </div>
+          </fieldset>
+
+          <!-- RESIZE SETTINGS -->
+          <fieldset class="groupbox">
+            <legend>RESIZE SETTINGS</legend>
+
+            <div class="field-row">
+              <label for="inputWidth">Ancho (px):</label>
+              <input type="number" id="inputWidth" class="input-retro" min="1" max="20000" value="">
+            </div>
+            <div class="field-row">
+              <label for="inputHeight">Alto (px):</label>
+              <input type="number" id="inputHeight" class="input-retro" min="1" max="20000" value="">
+            </div>
+
+            <div class="checkbox-row">
+              <input type="checkbox" id="chkAspect" checked>
+              <label for="chkAspect">Mantener proporción (aspect ratio)</label>
+            </div>
+
+            <div class="dims-compare">
+              <div>ORIGINAL: <b id="dimsOriginal">— × —</b> px</div>
+              <div>OUTPUT: <b id="dimsOutput">— × —</b> px</div>
+            </div>
+
+            <hr class="divider">
+
+            <div class="field-row">
+              <label for="selectFormat">Formato de salida:</label>
+              <select id="selectFormat" class="select-retro">
+                <option value="image/jpeg">JPG / JPEG</option>
+                <option value="image/png">PNG</option>
+                <option value="image/webp">WEBP</option>
+              </select>
+            </div>
+
+            <div class="field-row" id="qualityRow">
+              <label for="inputQuality">Calidad: <span id="qualityValue">85</span></label>
+              <input type="range" id="inputQuality" min="10" max="100" value="85" class="slider-retro">
+            </div>
+
+            <button class="btn-3d btn-big" id="btnResize" disabled>REDIMENSIONAR IMAGEN ▶</button>
+
+            <div class="progress-wrap" id="progressWrap" hidden>
+              <div class="progress-track">
+                <div class="progress-fill" id="progressFill"></div>
+              </div>
+            </div>
+          </fieldset>
+
+        </div>
+
+        <!-- RIGHT COLUMN -->
+        <div class="col col-right">
+
+          <!-- PREVIEW -->
+          <fieldset class="groupbox groupbox-grow">
+            <legend>PREVIEW</legend>
+            <div class="preview-split">
+              <div class="preview-pane">
+                <div class="preview-label">ANTES</div>
+                <div class="preview-canvas-wrap">
+                  <img id="previewBefore" class="preview-img" alt="Antes" hidden>
+                  <div class="preview-placeholder" id="previewBeforePlaceholder">Sin imagen</div>
+                </div>
+              </div>
+              <div class="preview-divider">→</div>
+              <div class="preview-pane">
+                <div class="preview-label">DESPUÉS</div>
+                <div class="preview-canvas-wrap">
+                  <img id="previewAfter" class="preview-img" alt="Después" hidden>
+                  <div class="preview-placeholder" id="previewAfterPlaceholder">Sin procesar</div>
+                </div>
+              </div>
+            </div>
+          </fieldset>
+
+          <!-- OUTPUT -->
+          <fieldset class="groupbox">
+            <legend>OUTPUT</legend>
+
+            <div class="info-panel" id="outputInfoPanel">
+              <div class="info-row"><span class="info-label">ORIGINAL SIZE:</span><span class="info-value" id="outOriginalSize">—</span></div>
+              <div class="info-row"><span class="info-label">NEW SIZE:</span><span class="info-value" id="outNewSize">—</span></div>
+              <div class="info-row"><span class="info-label">REDUCTION:</span><span class="info-value" id="outReduction">—</span></div>
+            </div>
+
+            <button class="btn-3d btn-big" id="btnSave" disabled>💾 GUARDAR IMAGEN</button>
+          </fieldset>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- Status bar -->
+    <div class="status-bar">
+      <div class="status-bar-field" id="statusMsg">Ready.</div>
+      <div class="status-bar-field status-bar-field-small" id="statusExtra">v1.0</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Retro modal for errors / about -->
+<div class="modal-overlay" id="modalOverlay" hidden>
+  <div class="modal-window">
+    <div class="title-bar">
+      <div class="title-bar-text" id="modalTitle">Aviso</div>
+      <div class="title-bar-controls">
+        <button class="title-btn title-btn-close" id="modalClose">×</button>
+      </div>
+    </div>
+    <div class="modal-body">
+      <div class="modal-icon" id="modalIcon">⚠</div>
+      <div class="modal-text" id="modalText"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-3d" id="modalOk">Aceptar</button>
+    </div>
+  </div>
+</div>
+
+<a id="downloadAnchor" hidden></a>
+
+<script src="script.js"></script>
+</body>
+</html>
