@@ -591,6 +591,10 @@ body {
   z-index: 200;
 }
 
+.modal-overlay[hidden] {
+  display: none;
+}
+
 .modal-window {
   width: 320px;
   background: var(--win-bg);
